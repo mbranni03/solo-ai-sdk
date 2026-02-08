@@ -1,5 +1,6 @@
 import type { Message } from "@/types/Message";
 import type Provider from "@/types/Provider";
+import type { ProviderResponse } from "@/types/Response";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -33,8 +34,18 @@ class GeminiProvider implements Provider {
       },
     );
 
-    const data = (await response.json()) as any;
-    return data.candidates[0].content.parts[0].text;
+    const data = (await response.json()) as ProviderResponse;
+    // console.log(JSON.stringify(data, null, 2));
+
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error("No candidates returned from Gemini API");
+    }
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!text) {
+      throw new Error("Invalid response structure from Gemini API");
+    }
+    return text;
   };
 
   stream = async (
