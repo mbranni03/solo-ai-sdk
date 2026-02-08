@@ -1,5 +1,8 @@
+import type { FunctionCall } from "./Tool";
+
 export interface Part {
-  text: string;
+  text?: string;
+  functionCall?: FunctionCall;
 }
 
 export interface Content {
