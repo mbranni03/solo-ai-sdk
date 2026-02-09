@@ -2,6 +2,11 @@ import type { Message } from "@/types/Message";
 import type Provider from "@/types/Provider";
 import type { ProviderResponse } from "@/types/Response";
 import type { Request } from "@/types/Request";
+import {
+  createImageGenerationTool,
+  createVideoGenerationTool,
+  createTextToSpeechTool,
+} from "@/tools/media";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -90,6 +95,14 @@ class GeminiProvider implements Provider {
     if (!response.body) throw new Error("No response body");
 
     return response.body;
+  };
+
+  getMediaTools = () => {
+    return {
+      generate_image: createImageGenerationTool(GEMINI_API_KEY || ""),
+      generate_video: createVideoGenerationTool(GEMINI_API_KEY || ""),
+      generate_speech: createTextToSpeechTool(GEMINI_API_KEY || ""),
+    };
   };
 }
 
