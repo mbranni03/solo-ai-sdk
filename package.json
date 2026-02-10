@@ -1,0 +1,51 @@
+{
+  "name": "solo-ai-sdk",
+  "version": "0.0.1",
+  "description": "A modular AI SDK for seamless integration with multiple LLM providers.",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "author": "mbranni03",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mbranni03/solo-ai-sdk"
+  },
+  "keywords": [
+    "ai",
+    "sdk",
+    "llm",
+    "openai",
+    "gemini",
+    "anthropic",
+    "xai",
+    "agent"
+  ],
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsup": "^8.5.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "zod": "^3.24.1",
+    "zod-to-json-schema": "^3.25.1"
+  }
+}
