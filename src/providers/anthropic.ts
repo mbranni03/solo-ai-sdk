@@ -2,7 +2,7 @@ import type { Message } from "@/types/Message";
 import type Provider from "@/types/Provider";
 import type { Request } from "@/types/Request";
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+import { getConfig } from "@/config";
 
 class AnthropicProvider implements Provider {
   name = "anthropic";
@@ -79,7 +79,7 @@ class AnthropicProvider implements Provider {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_API_KEY || "",
+        "x-api-key": getConfig().anthropic?.apiKey || "",
         "anthropic-version": this.version,
         "anthropic-beta": "prompt-caching-2024-07-31",
         "content-type": "application/json",
@@ -177,7 +177,7 @@ class AnthropicProvider implements Provider {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_API_KEY || "",
+        "x-api-key": getConfig().anthropic?.apiKey || "",
         "anthropic-version": this.version,
         "anthropic-beta": "prompt-caching-2024-07-31",
         "content-type": "application/json",

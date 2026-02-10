@@ -8,7 +8,7 @@ import type {
 } from "@/types/ProviderResponse";
 import type { Request } from "@/types/Request";
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+import { getConfig } from "@/config";
 
 class OpenAIProvider implements Provider, MediaProvider {
   name = "openai";
@@ -52,7 +52,7 @@ class OpenAIProvider implements Provider, MediaProvider {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${getConfig().openai?.apiKey}`,
       },
       body: JSON.stringify(body),
     });
@@ -117,7 +117,7 @@ class OpenAIProvider implements Provider, MediaProvider {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${getConfig().openai?.apiKey}`,
       },
       body: JSON.stringify(body),
     });
@@ -140,7 +140,7 @@ class OpenAIProvider implements Provider, MediaProvider {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          Authorization: `Bearer ${getConfig().openai?.apiKey}`,
         },
         body: JSON.stringify({
           prompt,
@@ -188,7 +188,7 @@ class OpenAIProvider implements Provider, MediaProvider {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${getConfig().openai?.apiKey}`,
       },
       body: JSON.stringify({
         model,
@@ -235,7 +235,7 @@ class OpenAIProvider implements Provider, MediaProvider {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${getConfig().openai?.apiKey}`,
       },
       body: JSON.stringify({
         prompt,

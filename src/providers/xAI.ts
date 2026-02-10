@@ -8,7 +8,7 @@ import type {
 } from "@/types/ProviderResponse";
 import type { Request } from "@/types/Request";
 
-const XAI_API_KEY = process.env.XAI_API_KEY;
+import { getConfig } from "@/config";
 
 class xAIProvider implements Provider, MediaProvider {
   name = "xAI";
@@ -56,7 +56,7 @@ class xAIProvider implements Provider, MediaProvider {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${XAI_API_KEY}`,
+        Authorization: `Bearer ${getConfig().xai?.apiKey}`,
       },
       body,
     });
@@ -125,7 +125,7 @@ class xAIProvider implements Provider, MediaProvider {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${XAI_API_KEY}`,
+        Authorization: `Bearer ${getConfig().xai?.apiKey}`,
       },
       body,
     });
@@ -144,7 +144,7 @@ class xAIProvider implements Provider, MediaProvider {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${XAI_API_KEY}`,
+        Authorization: `Bearer ${getConfig().xai?.apiKey}`,
       },
       body: JSON.stringify({
         prompt,
@@ -193,7 +193,7 @@ class xAIProvider implements Provider, MediaProvider {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${XAI_API_KEY}`,
+        Authorization: `Bearer ${getConfig().xai?.apiKey}`,
       },
       body: JSON.stringify(body),
     });
