@@ -1,7 +1,42 @@
-// Not used yet
-export const config = {
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-  XAI_API_KEY: process.env.XAI_API_KEY,
+export interface SoloAIConfig {
+  gemini?: {
+    apiKey?: string;
+  };
+  openai?: {
+    apiKey?: string;
+  };
+  anthropic?: {
+    apiKey?: string;
+  };
+  xai?: {
+    apiKey?: string;
+  };
+}
+
+let config: SoloAIConfig = {
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY,
+  },
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY,
+  },
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  },
+  xai: {
+    apiKey: process.env.XAI_API_KEY,
+  },
 };
+
+export const init = (newConfig: SoloAIConfig) => {
+  config = {
+    ...config,
+    ...newConfig,
+    gemini: { ...config.gemini, ...newConfig.gemini },
+    openai: { ...config.openai, ...newConfig.openai },
+    anthropic: { ...config.anthropic, ...newConfig.anthropic },
+    xai: { ...config.xai, ...newConfig.xai },
+  };
+};
+
+export const getConfig = () => config;

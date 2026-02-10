@@ -1,6 +1,6 @@
 {
   "name": "solo-ai-sdk",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A modular AI SDK for seamless integration with multiple LLM providers.",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

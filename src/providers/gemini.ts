@@ -9,7 +9,7 @@ import type {
 } from "@/types/ProviderResponse";
 import type { Request } from "@/types/Request";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+import { getConfig } from "@/config";
 
 class GeminiProvider implements Provider, MediaProvider {
   name = "gemini";
@@ -42,7 +42,7 @@ class GeminiProvider implements Provider, MediaProvider {
     const body = JSON.stringify(bodyObj);
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/${this.version}/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/${this.version}/models/${model}:generateContent?key=${getConfig().gemini?.apiKey}`,
       {
         method: "POST",
         headers: {
@@ -104,7 +104,7 @@ class GeminiProvider implements Provider, MediaProvider {
     const body = JSON.stringify(bodyObj);
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/${this.version}/models/${model}:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/${this.version}/models/${model}:streamGenerateContent?alt=sse&key=${getConfig().gemini?.apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -144,7 +144,7 @@ class GeminiProvider implements Provider, MediaProvider {
     }
 
     const response = await fetch(
-      `${BASE_URL}/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+      `${BASE_URL}/models/${model}:generateContent?key=${getConfig().gemini?.apiKey}`,
       {
         method: "POST",
         headers: {
@@ -201,7 +201,7 @@ class GeminiProvider implements Provider, MediaProvider {
       {
         method: "POST",
         headers: {
-          "x-goog-api-key": GEMINI_API_KEY || "",
+          "x-goog-api-key": getConfig().gemini?.apiKey || "",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -231,7 +231,7 @@ class GeminiProvider implements Provider, MediaProvider {
     // Poll for completion
     while (true) {
       const statusResponse = await fetch(`${BASE_URL}/${operationName}`, {
-        headers: { "x-goog-api-key": GEMINI_API_KEY || "" },
+        headers: { "x-goog-api-key": getConfig().gemini?.apiKey || "" },
       });
 
       if (!statusResponse.ok) {
@@ -298,7 +298,7 @@ class GeminiProvider implements Provider, MediaProvider {
     }
 
     const response = await fetch(
-      `${BASE_URL}/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+      `${BASE_URL}/models/${model}:generateContent?key=${getConfig().gemini?.apiKey}`,
       {
         method: "POST",
         headers: {
