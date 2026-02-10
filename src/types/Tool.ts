@@ -5,17 +5,13 @@ export class Tool<T = any> {
   name: string;
   description: string;
   schema: T;
-  execute?: (
-    args: T extends z.ZodTypeAny ? z.infer<T> : any,
-  ) => Promise<string>;
+  execute?: (args: T extends z.ZodTypeAny ? z.infer<T> : any) => Promise<any>;
 
   constructor(tool: {
     name: string;
     description: string;
     schema: T;
-    execute?: (
-      args: T extends z.ZodTypeAny ? z.infer<T> : any,
-    ) => Promise<string>;
+    execute?: (args: T extends z.ZodTypeAny ? z.infer<T> : any) => Promise<any>;
   }) {
     this.name = tool.name;
     this.description = tool.description;

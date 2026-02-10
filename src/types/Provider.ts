@@ -9,6 +9,4 @@ export default interface Provider {
     query: Request,
     model?: string,
   ) => Promise<ReadableStream<Uint8Array> | null>;
-
-  getMediaTools?: () => Record<string, any>;
 }

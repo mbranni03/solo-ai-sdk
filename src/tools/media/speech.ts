@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { Tool } from "@/types/Tool";
+import type { MediaProvider } from "@/types/MediaProvider";
 
-export const createTextToSpeechTool = (apiKey: string) => {
+export const createTextToSpeechTool = (
+  provider: MediaProvider,
+  model?: string,
+) => {
   return new Tool({
     name: "generate_speech",
     description: "Convert text to speech/audio.",
@@ -21,82 +25,7 @@ export const createTextToSpeechTool = (apiKey: string) => {
         ),
     }),
     execute: async ({ text, speakers, voice }) => {
-      const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-
-      let speechConfig: any = {};
-
-      if (speakers && Object.keys(speakers).length > 0) {
-        speechConfig = {
-          multiSpeakerVoiceConfig: {
-            speakerVoiceConfigs: Object.entries(speakers).map(
-              ([speaker, voiceName]) => ({
-                speaker,
-                voiceConfig: {
-                  prebuiltVoiceConfig: {
-                    voiceName,
-                  },
-                },
-              }),
-            ),
-          },
-        };
-      } else {
-        // Default to single speaker
-        speechConfig = {
-          voiceConfig: {
-            prebuiltVoiceConfig: {
-              voiceName: voice || "Kore", // Default voice
-            },
-          },
-        };
-      }
-
-      const response = await fetch(
-        `${BASE_URL}/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text }],
-              },
-            ],
-            generationConfig: {
-              responseModalities: ["AUDIO"],
-              speechConfig,
-            },
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to generate speech: ${response.status} ${response.statusText}`,
-        );
-      }
-
-      const data: any = await response.json();
-
-      const candidate = data.candidates?.[0];
-      if (candidate) {
-        // Check for inlineData (camelCase) as returned by API, or inline_data just in case
-        const audioPart = candidate.content?.parts?.find(
-          (p: any) => p.inlineData || p.inline_data,
-        );
-
-        if (audioPart) {
-          const inlineData = audioPart.inlineData || audioPart.inline_data;
-          return JSON.stringify({
-            audio_base64: inlineData.data,
-            message: "Speech generation successful",
-          });
-        }
-      }
-
-      throw new Error("No audio content returned from Gemini.");
+      return provider.generateSpeech(text, model, { speakers, voice });
     },
   });
 };

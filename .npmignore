@@ -1,0 +1,15 @@
+# Development files
+src
+test.ts
+tsconfig.json
+bun.lock
+.env
+.gitignore
+USAGE.md
+README.md (if you want to keep it out, but usually included)
+
+# Build tools
+tsup.config.ts
+
+# Logs
+*.log
