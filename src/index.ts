@@ -3,6 +3,7 @@ import GeminiProvider from "@/providers/gemini";
 import OpenAIProvider from "@/providers/openAI";
 import AnthropicProvider from "@/providers/anthropic";
 import xAIProvider from "@/providers/xAI";
+import MistralProvider from "@/providers/mistral";
 import { Tool } from "@/types/Tool";
 import type { Message } from "@/types/Message";
 import type {
@@ -20,6 +21,7 @@ export {
   OpenAIProvider,
   AnthropicProvider,
   xAIProvider,
+  MistralProvider,
   Tool,
   createImageGenerationTool,
   createTextToSpeechTool,
