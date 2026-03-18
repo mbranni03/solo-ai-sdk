@@ -3,7 +3,7 @@ import OpenAIProvider from "@/providers/openAI";
 import AnthropicProvider from "@/providers/anthropic";
 import xAIProvider from "@/providers/xAI";
 import MistralProvider from "@/providers/mistral";
-import MoonshotProvider from "@/providers/nvidia";
+import MoonshotProvider from "@/providers/moonshot";
 import NvidiaProvider from "@/providers/nvidia";
 
 const getProvider = (provider: string) => {
@@ -19,6 +19,10 @@ const getProvider = (provider: string) => {
     case "mistral":
       return new MistralProvider();
     case "moonshot":
+    case "kimi":
+    case "moonshotai":
+      return new MoonshotProvider();
+    case "nemotron":
     case "nvidia":
       return new NvidiaProvider();
     default:
@@ -26,5 +30,13 @@ const getProvider = (provider: string) => {
   }
 };
 
-export { GeminiProvider, OpenAIProvider, AnthropicProvider, xAIProvider, MistralProvider, NvidiaProvider, MoonshotProvider };
+export {
+  GeminiProvider,
+  OpenAIProvider,
+  AnthropicProvider,
+  xAIProvider,
+  MistralProvider,
+  NvidiaProvider,
+  MoonshotProvider,
+};
 export default getProvider;

@@ -4,12 +4,12 @@ import type { Request } from "@/types/Request";
 
 import { getConfig } from "@/config";
 
-class NvidiaProvider implements Provider {
-  name = "nvidia";
+class MoonshotProvider implements Provider {
+  name = "moonshot";
 
   generate = async (
     query: Request,
-    model: string = "nvidia/nemotron-3-super-120b-a12b",
+    model: string = "moonshotai/kimi-k2.5",
   ): Promise<Message> => {
     const messages = [
       { role: "system", content: query.systemMessage },
@@ -31,12 +31,11 @@ class NvidiaProvider implements Provider {
 
     const body: any = {
       messages,
-      model: model.includes("/") ? model : `nvidia/${model}`,
+      model: model.includes("/") ? model : `moonshotai/${model}`,
       max_tokens: 16384,
       temperature: 1.0,
-      top_p: 0.95,
-      reasoning_budget: 16384,
-      chat_template_kwargs: { enable_thinking: true },
+      top_p: 1.0,
+      chat_template_kwargs: { thinking: true },
       tools: query.tools?.map((tool) => ({
         type: "function",
         function: {
@@ -62,12 +61,12 @@ class NvidiaProvider implements Provider {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Nvidia API Error ${response.status}: ${errorText}`);
+      throw new Error(`Moonshot (via Nvidia) API Error ${response.status}: ${errorText}`);
     }
 
     const data: any = await response.json();
     if (!data.choices || data.choices.length === 0) {
-      throw new Error("No choices returned from Nvidia API");
+      throw new Error("No choices returned from Moonshot API");
     }
 
     const message = data.choices[0].message;
@@ -86,7 +85,7 @@ class NvidiaProvider implements Provider {
 
   stream = async (
     query: Request,
-    model: string = "nvidia/nemotron-3-super-120b-a12b",
+    model: string = "moonshotai/kimi-k2.5",
   ): Promise<ReadableStream<Uint8Array> | null> => {
     const messages = [
       { role: "system", content: query.systemMessage },
@@ -108,12 +107,11 @@ class NvidiaProvider implements Provider {
 
     const body = {
       messages,
-      model: model.includes("/") ? model : `nvidia/${model}`,
+      model: model.includes("/") ? model : `moonshotai/${model}`,
       max_tokens: 16384,
       temperature: 1.0,
-      top_p: 0.95,
-      reasoning_budget: 16384,
-      chat_template_kwargs: { enable_thinking: true },
+      top_p: 1.0,
+      chat_template_kwargs: { thinking: true },
       stream: true,
       tools: query.tools?.map((tool) => ({
         type: "function",
@@ -140,7 +138,7 @@ class NvidiaProvider implements Provider {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Nvidia API Error ${response.status}: ${errorText}`);
+      throw new Error(`Moonshot (via Nvidia) API Error ${response.status}: ${errorText}`);
     }
 
     if (!response.body) throw new Error("No response body");
@@ -149,4 +147,4 @@ class NvidiaProvider implements Provider {
   };
 }
 
-export default NvidiaProvider;
+export default MoonshotProvider;
