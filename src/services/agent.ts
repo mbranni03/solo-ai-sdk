@@ -121,6 +121,7 @@ class Agent {
     return new ReadableStream<Uint8Array>({
       async start(controller) {
         try {
+          console.log(`[Agent] Starting streamSSE for model: ${options?.model}`);
           const tools = Object.values(options?.tools || {}).map((tool: Tool) =>
             tool.getFunctionDeclaration(),
           );
@@ -131,6 +132,7 @@ class Agent {
           );
 
           if (!rawStream) {
+            console.error("[Agent] No stream returned from provider");
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ type: "error", message: "No stream returned from provider" })}\n\n`),
             );
@@ -142,6 +144,8 @@ class Agent {
           const decoder = new TextDecoder();
           let fullText = "";
           let inputChars = 0;
+          let sseBuffer = "";
+          let chunkIndex = 0;
 
           // Count input chars for token estimation
           inputChars += systemMessage.length;
@@ -156,15 +160,26 @@ class Agent {
 
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+              console.log(`[Agent] SDK reader done. Received ${chunkIndex} chunks.`);
+              break;
+            }
 
+            chunkIndex++;
             const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split("\n");
+            sseBuffer += chunk;
+
+            const lines = sseBuffer.split("\n");
+            // Important: keep the last (potentially incomplete) line in the buffer
+            sseBuffer = lines.pop() || "";
 
             for (const line of lines) {
               if (!line.startsWith("data: ")) continue;
               const jsonStr = line.slice(6).trim();
-              if (!jsonStr || jsonStr === "[DONE]") continue;
+              if (!jsonStr || jsonStr === "[DONE]") {
+                if (jsonStr === "[DONE]") console.log("[Agent] Received [DONE]");
+                continue;
+              }
 
               try {
                 const data = JSON.parse(jsonStr);
@@ -179,7 +194,7 @@ class Agent {
                   continue;
                 }
 
-                // --- OpenAI format ---
+                // --- OpenAI format (used by OpenAI, Mistral, Nvidia, etc.) ---
                 const oaiDelta = data.choices?.[0]?.delta?.content;
                 if (oaiDelta) {
                   fullText += oaiDelta;
@@ -202,8 +217,8 @@ class Agent {
                 if (data.type === "message_delta" && data.usage) {
                   // Will be captured in done event below
                 }
-              } catch {
-                // Partial JSON or non-JSON line, skip
+              } catch (e) {
+                console.warn("[Agent] Failed to parse SSE JSON chunk:", jsonStr, e);
               }
             }
           }
@@ -211,6 +226,8 @@ class Agent {
           // Estimate tokens (fallback: ~4 chars per token)
           const estimatedInputTokens = Math.ceil(inputChars / 4);
           const estimatedOutputTokens = Math.ceil(fullText.length / 4);
+
+          console.log(`[Agent] Stream complete. Total text length: ${fullText.length}`);
 
           controller.enqueue(
             encoder.encode(
@@ -226,6 +243,7 @@ class Agent {
           );
           controller.close();
         } catch (err: any) {
+          console.error("[Agent] Stream error:", err);
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ type: "error", message: err.message || "Stream error" })}\n\n`),
           );
