@@ -14,6 +14,9 @@ export interface SoloAIConfig {
   mistral?: {
     apiKey?: string;
   };
+  nvidia?: {
+    apiKey?: string;
+  };
 }
 
 let config: SoloAIConfig = {
@@ -32,6 +35,9 @@ let config: SoloAIConfig = {
   mistral: {
     apiKey: process.env.MISTRAL_API_KEY,
   },
+  nvidia: {
+    apiKey: process.env.NVIDIA_API_KEY,
+  },
 };
 
 export const init = (newConfig: SoloAIConfig) => {
@@ -43,6 +49,7 @@ export const init = (newConfig: SoloAIConfig) => {
     anthropic: { ...config.anthropic, ...newConfig.anthropic },
     xai: { ...config.xai, ...newConfig.xai },
     mistral: { ...config.mistral, ...newConfig.mistral },
+    nvidia: { ...config.nvidia, ...newConfig.nvidia },
   };
 };
 

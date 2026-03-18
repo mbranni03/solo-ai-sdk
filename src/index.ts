@@ -4,6 +4,8 @@ import OpenAIProvider from "@/providers/openAI";
 import AnthropicProvider from "@/providers/anthropic";
 import xAIProvider from "@/providers/xAI";
 import MistralProvider from "@/providers/mistral";
+import NvidiaProvider from "@/providers/nvidia";
+const MoonshotProvider = NvidiaProvider;
 import { Tool } from "@/types/Tool";
 import type { Message } from "@/types/Message";
 import type {
@@ -22,6 +24,8 @@ export {
   AnthropicProvider,
   xAIProvider,
   MistralProvider,
+  MoonshotProvider,
+  NvidiaProvider,
   Tool,
   createImageGenerationTool,
   createTextToSpeechTool,
