@@ -107,6 +107,12 @@ class AnthropicProvider implements Provider {
             args: toolUse.input,
           }
         : undefined,
+      usage: data.usage
+        ? {
+            input_tokens: data.usage.input_tokens,
+            output_tokens: data.usage.output_tokens,
+          }
+        : undefined,
     };
   };
 

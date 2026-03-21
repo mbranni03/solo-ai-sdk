@@ -6,6 +6,7 @@ import xAIProvider from "@/providers/xAI";
 import MistralProvider from "@/providers/mistral";
 import NvidiaProvider from "@/providers/nvidia";
 import MoonshotProvider from "@/providers/moonshot";
+import BedrockProvider from "@/providers/bedrock";
 
 import { Tool } from "@/types/Tool";
 import type { Message } from "@/types/Message";
@@ -27,6 +28,7 @@ export {
   MistralProvider,
   NvidiaProvider,
   MoonshotProvider,
+  BedrockProvider,
   Tool,
   createImageGenerationTool,
   createTextToSpeechTool,

@@ -81,6 +81,12 @@ class NvidiaProvider implements Provider {
             args: JSON.parse(message.tool_calls[0].function.arguments),
           }
         : undefined,
+      usage: data.usage
+        ? {
+            input_tokens: data.usage.prompt_tokens,
+            output_tokens: data.usage.completion_tokens,
+          }
+        : undefined,
     };
   };
 

@@ -146,6 +146,8 @@ class Agent {
           let inputChars = 0;
           let sseBuffer = "";
           let chunkIndex = 0;
+          let realUsage: { input_tokens: number; output_tokens: number } | null =
+            null;
 
           // Count input chars for token estimation
           inputChars += systemMessage.length;
@@ -191,7 +193,13 @@ class Agent {
                   controller.enqueue(
                     encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: geminiText })}\n\n`),
                   );
-                  continue;
+                }
+
+                if (data.usageMetadata) {
+                  realUsage = {
+                    input_tokens: data.usageMetadata.promptTokenCount,
+                    output_tokens: data.usageMetadata.candidatesTokenCount,
+                  };
                 }
 
                 // --- OpenAI format (used by OpenAI, Mistral, Nvidia, etc.) ---
@@ -201,7 +209,13 @@ class Agent {
                   controller.enqueue(
                     encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: oaiDelta })}\n\n`),
                   );
-                  continue;
+                }
+
+                if (data.usage) {
+                  realUsage = {
+                    input_tokens: data.usage.prompt_tokens || data.usage.input_tokens,
+                    output_tokens: data.usage.completion_tokens || data.usage.output_tokens,
+                  };
                 }
 
                 // --- Anthropic format ---
@@ -210,12 +224,21 @@ class Agent {
                   controller.enqueue(
                     encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: data.delta.text })}\n\n`),
                   );
-                  continue;
                 }
 
                 // Anthropic message_stop / message_delta with usage
-                if (data.type === "message_delta" && data.usage) {
-                  // Will be captured in done event below
+                if (
+                  (data.type === "message_delta" || data.type === "message_start") &&
+                  data.message?.usage
+                ) {
+                  realUsage = {
+                    input_tokens: data.message.usage.input_tokens,
+                    output_tokens: data.message.usage.output_tokens,
+                  };
+                } else if (data.type === "message_delta" && data.usage) {
+                  // delta usage (for output tokens mostly)
+                  if (!realUsage) realUsage = { input_tokens: 0, output_tokens: 0 };
+                  if (data.usage.output_tokens) realUsage.output_tokens = data.usage.output_tokens;
                 }
               } catch (e) {
                 console.warn("[Agent] Failed to parse SSE JSON chunk:", jsonStr, e);
@@ -223,21 +246,20 @@ class Agent {
             }
           }
 
-          // Estimate tokens (fallback: ~4 chars per token)
-          const estimatedInputTokens = Math.ceil(inputChars / 4);
-          const estimatedOutputTokens = Math.ceil(fullText.length / 4);
+          // Decide usage: real if available, else estimated
+          const usage = realUsage || {
+            input_tokens: Math.ceil(inputChars / 4),
+            output_tokens: Math.ceil(fullText.length / 4),
+          };
 
-          console.log(`[Agent] Stream complete. Total text length: ${fullText.length}`);
+          console.log(`[Agent] Stream complete. Total text length: ${fullText.length}. Usage:`, usage);
 
           controller.enqueue(
             encoder.encode(
               `data: ${JSON.stringify({
                 type: "done",
                 content: fullText,
-                usage: {
-                  input_tokens: estimatedInputTokens,
-                  output_tokens: estimatedOutputTokens,
-                },
+                usage,
               })}\n\n`,
             ),
           );

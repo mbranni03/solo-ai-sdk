@@ -74,6 +74,12 @@ class GeminiProvider implements Provider, MediaProvider {
       role: "assistant",
       content: firstPart.text,
       functionCall: firstPart.functionCall,
+      usage: data.usageMetadata
+        ? {
+            input_tokens: data.usageMetadata.promptTokenCount,
+            output_tokens: data.usageMetadata.candidatesTokenCount,
+          }
+        : undefined,
     };
   };
 

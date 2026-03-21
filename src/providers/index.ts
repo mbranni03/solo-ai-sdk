@@ -6,6 +6,8 @@ import MistralProvider from "@/providers/mistral";
 import MoonshotProvider from "@/providers/moonshot";
 import NvidiaProvider from "@/providers/nvidia";
 
+import BedrockProvider from "@/providers/bedrock";
+
 const getProvider = (provider: string) => {
   switch (provider.toLowerCase()) {
     case "gemini":
@@ -25,6 +27,10 @@ const getProvider = (provider: string) => {
     case "nemotron":
     case "nvidia":
       return new NvidiaProvider();
+    case "bedrock":
+    case "aws":
+    case "aws_bedrock":
+      return new BedrockProvider();
     default:
       throw new Error(`Provider ${provider} not found`);
   }
