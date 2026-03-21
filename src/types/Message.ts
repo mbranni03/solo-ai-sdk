@@ -11,4 +11,8 @@ export interface Message {
   content?: string | ContentPart[];
   functionCall?: FunctionCall;
   functionResponse?: FunctionResponse;
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+  };
 }

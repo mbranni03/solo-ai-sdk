@@ -3,6 +3,11 @@ import GeminiProvider from "@/providers/gemini";
 import OpenAIProvider from "@/providers/openAI";
 import AnthropicProvider from "@/providers/anthropic";
 import xAIProvider from "@/providers/xAI";
+import MistralProvider from "@/providers/mistral";
+import NvidiaProvider from "@/providers/nvidia";
+import MoonshotProvider from "@/providers/moonshot";
+import BedrockProvider from "@/providers/bedrock";
+
 import { Tool } from "@/types/Tool";
 import type { Message } from "@/types/Message";
 import type {
@@ -20,6 +25,10 @@ export {
   OpenAIProvider,
   AnthropicProvider,
   xAIProvider,
+  MistralProvider,
+  NvidiaProvider,
+  MoonshotProvider,
+  BedrockProvider,
   Tool,
   createImageGenerationTool,
   createTextToSpeechTool,

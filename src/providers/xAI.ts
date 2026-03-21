@@ -80,6 +80,12 @@ class xAIProvider implements Provider, MediaProvider {
             ),
           }
         : undefined,
+      usage: data.usage
+        ? {
+            input_tokens: data.usage.prompt_tokens,
+            output_tokens: data.usage.completion_tokens,
+          }
+        : undefined,
     };
   };
 
