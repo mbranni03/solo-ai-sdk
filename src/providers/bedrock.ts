@@ -100,9 +100,11 @@ class BedrockProvider implements Provider {
 
     return new ReadableStream({
       async start(controller) {
+        let hasContent = false;
         try {
           for await (const event of response.stream!) {
             if (event.contentBlockDelta?.delta?.text) {
+              hasContent = true;
               const chunk = {
                 choices: [
                   {
@@ -128,8 +130,37 @@ class BedrockProvider implements Provider {
           }
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
-        } catch (e) {
-          controller.error(e);
+        } catch (e: any) {
+          // Log deserialization details if available
+          const rawResponse = e?.$response;
+          if (rawResponse) {
+            console.error(
+              `[BedrockProvider] Stream deserialization error. Status: ${rawResponse.statusCode}`,
+            );
+            try {
+              const body = rawResponse.body;
+              if (body) {
+                const bodyText = typeof body === "string"
+                  ? body
+                  : body instanceof Uint8Array
+                    ? new TextDecoder().decode(body)
+                    : JSON.stringify(body);
+                console.error(`[BedrockProvider] Raw response body:`, bodyText.slice(0, 500));
+              }
+            } catch { /* ignore body read errors */ }
+          } else {
+            console.error(`[BedrockProvider] Stream error:`, e?.message || e);
+          }
+
+          // Still close the stream gracefully so the client doesn't hang
+          // If we had partial content, close normally so the client sees it
+          try {
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+          } catch {
+            // Controller may already be in error state
+            try { controller.error(e); } catch { /* already closed */ }
+          }
         }
       },
     });
