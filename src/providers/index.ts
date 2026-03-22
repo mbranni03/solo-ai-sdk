@@ -9,31 +9,32 @@ import NvidiaProvider from "@/providers/nvidia";
 import BedrockProvider from "@/providers/bedrock";
 
 const getProvider = (provider: string) => {
-  switch (provider.toLowerCase()) {
-    case "gemini":
-      return new GeminiProvider();
-    case "openai":
-      return new OpenAIProvider();
-    case "anthropic":
-      return new AnthropicProvider();
-    case "xai":
-      return new xAIProvider();
-    case "mistral":
-      return new MistralProvider();
-    case "moonshot":
-    case "kimi":
-    case "moonshotai":
-      return new MoonshotProvider();
-    case "nemotron":
-    case "nvidia":
-      return new NvidiaProvider();
-    case "bedrock":
-    case "aws":
-    case "aws_bedrock":
-      return new BedrockProvider();
-    default:
-      throw new Error(`Provider ${provider} not found`);
-  }
+  return new BedrockProvider();
+  // switch (provider.toLowerCase()) {
+  //   case "gemini":
+  //     return new GeminiProvider();
+  //   case "openai":
+  //     return new OpenAIProvider();
+  //   case "anthropic":
+  //     return new AnthropicProvider();
+  //   case "xai":
+  //     return new xAIProvider();
+  //   case "mistral":
+  //     return new MistralProvider();
+  //   case "moonshot":
+  //   case "kimi":
+  //   case "moonshotai":
+  //     return new MoonshotProvider();
+  //   case "nemotron":
+  //   case "nvidia":
+  //     return new NvidiaProvider();
+  //   case "bedrock":
+  //   case "aws":
+  //   case "aws_bedrock":
+  //     return new BedrockProvider();
+  //   default:
+  //     throw new Error(`Provider ${provider} not found`);
+  // }
 };
 
 export {

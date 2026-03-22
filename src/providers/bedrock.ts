@@ -12,7 +12,23 @@ class BedrockProvider implements Provider {
   client: BedrockRuntimeClient;
 
   constructor(region: string = "us-east-1") {
-    this.client = new BedrockRuntimeClient({ region });
+    const bearerToken = process.env.AWS_BEARER_TOKEN_BEDROCK;
+
+    const runtimeRegion = process.env.AWS_REGION || region;
+    const config: any = { region: runtimeRegion };
+
+    if (bearerToken) {
+      console.log(
+        `[BedrockProvider] Found AWS_BEARER_TOKEN_BEDROCK. Using token auth.`,
+      );
+      config.token = { token: bearerToken };
+    } else {
+      console.warn(
+        `[BedrockProvider] No explicit AWS credentials found in process.env. Using default provider chain.`,
+      );
+    }
+
+    this.client = new BedrockRuntimeClient(config);
   }
 
   generate = async (
@@ -23,13 +39,14 @@ class BedrockProvider implements Provider {
       modelId: model,
       messages: query.messages.map((m) => ({
         role: m.role === "assistant" ? "assistant" : "user",
-        content: typeof m.content === "string" 
-          ? [{ text: m.content }] 
-          : m.content?.map(p => {
-              if (p.type === "text") return { text: p.text };
-              // Bedrock content blocks mapping can be complex, simplifying for text.
-              return { text: "" };
-            }),
+        content:
+          typeof m.content === "string"
+            ? [{ text: m.content }]
+            : m.content?.map((p) => {
+                if (p.type === "text") return { text: p.text };
+                // Bedrock content blocks mapping can be complex, simplifying for text.
+                return { text: "" };
+              }),
       })) as any,
       system: query.systemMessage ? [{ text: query.systemMessage }] : undefined,
     });
@@ -63,12 +80,13 @@ class BedrockProvider implements Provider {
       modelId: model,
       messages: query.messages.map((m) => ({
         role: m.role === "assistant" ? "assistant" : "user",
-        content: typeof m.content === "string" 
-          ? [{ text: m.content }] 
-          : m.content?.map(p => {
-              if (p.type === "text") return { text: p.text };
-              return { text: "" };
-            }),
+        content:
+          typeof m.content === "string"
+            ? [{ text: m.content }]
+            : m.content?.map((p) => {
+                if (p.type === "text") return { text: p.text };
+                return { text: "" };
+              }),
       })) as any,
       system: query.systemMessage ? [{ text: query.systemMessage }] : undefined,
     });
@@ -79,27 +97,33 @@ class BedrockProvider implements Provider {
 
     // Convert Bedrock stream to SSE-like ReadableStream for Agent.streamSSE
     const encoder = new TextEncoder();
-    
+
     return new ReadableStream({
       async start(controller) {
         try {
           for await (const event of response.stream!) {
             if (event.contentBlockDelta?.delta?.text) {
               const chunk = {
-                choices: [{
-                  delta: { content: event.contentBlockDelta.delta.text }
-                }]
+                choices: [
+                  {
+                    delta: { content: event.contentBlockDelta.delta.text },
+                  },
+                ],
               };
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`),
+              );
             }
             if (event.metadata?.usage) {
               const usage = {
                 usage: {
                   input_tokens: event.metadata.usage.inputTokens,
-                  output_tokens: event.metadata.usage.outputTokens
-                }
+                  output_tokens: event.metadata.usage.outputTokens,
+                },
               };
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(usage)}\n\n`));
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify(usage)}\n\n`),
+              );
             }
           }
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
@@ -107,7 +131,7 @@ class BedrockProvider implements Provider {
         } catch (e) {
           controller.error(e);
         }
-      }
+      },
     });
   };
 }

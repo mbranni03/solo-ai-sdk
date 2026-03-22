@@ -3,12 +3,27 @@ import getProvider from "@/providers";
 import type { Message } from "@/types/Message";
 import type { ProviderResponse } from "@/types/Response";
 import type { Tool } from "@/types/Tool";
+import { FoundationalModels } from "@/config/models";
 
 class Agent {
   provider: Provider;
 
   constructor(provider: string) {
-    this.provider = getProvider(provider);
+    // For now, hardcode using aws_bedrock as requested
+    this.provider = getProvider("aws_bedrock");
+  }
+
+  private resolveModel(model?: string): string {
+    if (!model) return "zai.glm-5"; // Default if no model provided
+    
+    const fm = FoundationalModels as any;
+    if (fm[model]?.aws_bedrock?.modelId) {
+      const resolved = fm[model].aws_bedrock.modelId;
+      console.log(`[Agent] Resolved ${model} to Bedrock modelId: ${resolved}`);
+      return resolved;
+    }
+    
+    return model;
   }
 
   generate = async (
@@ -22,11 +37,50 @@ class Agent {
     const tools = Object.values(options?.tools || {}).map((tool: Tool) =>
       tool.getFunctionDeclaration(),
     );
+    const resolvedModel = this.resolveModel(options?.model);
     const response = await this.provider.generate(
       { systemMessage, messages, tools },
-      options?.model,
+      resolvedModel,
     );
-    return response;
+// ... existing OpenAI format code
+
+    // Return in OpenAI ChatCompletion format
+    return {
+      id: `chatcmpl-${Date.now()}`,
+      object: "chat.completion" as const,
+      created: Math.floor(Date.now() / 1000),
+      model: options?.model || "unknown",
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: "assistant" as const,
+            content: response.content as string | null,
+            tool_calls: response.functionCall
+              ? [
+                  {
+                    id: `call_${Date.now()}`,
+                    type: "function" as const,
+                    function: {
+                      name: response.functionCall.name,
+                      arguments: JSON.stringify(response.functionCall.args),
+                    },
+                  },
+                ]
+              : undefined,
+          },
+          finish_reason: response.functionCall ? "tool_calls" : "stop",
+        },
+      ],
+      usage: response.usage
+        ? {
+            prompt_tokens: response.usage.input_tokens,
+            completion_tokens: response.usage.output_tokens,
+            total_tokens:
+              response.usage.input_tokens + response.usage.output_tokens,
+          }
+        : undefined,
+    };
   };
 
   stream = async (
@@ -42,9 +96,10 @@ class Agent {
     const tools = Object.values(options?.tools || {}).map((tool: Tool) =>
       tool.getFunctionDeclaration(),
     );
+    const resolvedModel = this.resolveModel(options?.model);
     const stream = await this.provider.stream(
       { systemMessage, messages, tools },
-      options?.model,
+      resolvedModel,
     );
 
     // Return the raw stream
@@ -100,12 +155,13 @@ class Agent {
   };
 
   /**
-   * Stream a response and produce a normalized ReadableStream of SSE events.
+   * Stream a response and produce a normalized ReadableStream of SSE events
+   * following the OpenAI `chat.completions` streaming format.
    *
-   * Emits:
-   * - `data: {"type":"chunk","text":"..."}\n\n` for each text chunk
-   * - `data: {"type":"done","content":"...","usage":{"input_tokens":N,"output_tokens":N}}\n\n` on completion
-   * - `data: {"type":"error","message":"..."}\n\n` on error
+   * Emits OpenAI-compatible chunks:
+   * - `data: {"id":"...","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"..."}}]}\n\n`
+   * - Final chunk with `usage` field when available
+   * - `data: [DONE]\n\n` to signal end of stream
    */
   streamSSE = (
     systemMessage: string,
@@ -117,25 +173,38 @@ class Agent {
   ): ReadableStream<Uint8Array> => {
     const encoder = new TextEncoder();
     const agent = this;
+    const chatId = `chatcmpl-${Date.now()}`;
+    const created = Math.floor(Date.now() / 1000);
+    const modelName = options?.model || "unknown";
 
     return new ReadableStream<Uint8Array>({
       async start(controller) {
         try {
-          console.log(`[Agent] Starting streamSSE for model: ${options?.model}`);
+          console.log(`[Agent] Starting streamSSE for model: ${modelName}`);
           const tools = Object.values(options?.tools || {}).map((tool: Tool) =>
             tool.getFunctionDeclaration(),
           );
 
+          const resolvedModel = agent.resolveModel(options?.model);
           const rawStream = await agent.provider.stream(
             { systemMessage, messages, tools },
-            options?.model,
+            resolvedModel,
           );
 
           if (!rawStream) {
             console.error("[Agent] No stream returned from provider");
+            const errorChunk = {
+              id: chatId,
+              object: "chat.completion.chunk",
+              created,
+              model: modelName,
+              choices: [],
+              error: { message: "No stream returned from provider" },
+            };
             controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ type: "error", message: "No stream returned from provider" })}\n\n`),
+              encoder.encode(`data: ${JSON.stringify(errorChunk)}\n\n`),
             );
+            controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
             controller.close();
             return;
           }
@@ -190,8 +259,21 @@ class Agent {
                 const geminiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (geminiText) {
                   fullText += geminiText;
+                  const oaiChunk = {
+                    id: chatId,
+                    object: "chat.completion.chunk",
+                    created,
+                    model: modelName,
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { content: geminiText },
+                        finish_reason: null,
+                      },
+                    ],
+                  };
                   controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: geminiText })}\n\n`),
+                    encoder.encode(`data: ${JSON.stringify(oaiChunk)}\n\n`),
                   );
                 }
 
@@ -206,8 +288,21 @@ class Agent {
                 const oaiDelta = data.choices?.[0]?.delta?.content;
                 if (oaiDelta) {
                   fullText += oaiDelta;
+                  const oaiChunk = {
+                    id: chatId,
+                    object: "chat.completion.chunk",
+                    created,
+                    model: modelName,
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { content: oaiDelta },
+                        finish_reason: null,
+                      },
+                    ],
+                  };
                   controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: oaiDelta })}\n\n`),
+                    encoder.encode(`data: ${JSON.stringify(oaiChunk)}\n\n`),
                   );
                 }
 
@@ -221,8 +316,21 @@ class Agent {
                 // --- Anthropic format ---
                 if (data.type === "content_block_delta" && data.delta?.text) {
                   fullText += data.delta.text;
+                  const oaiChunk = {
+                    id: chatId,
+                    object: "chat.completion.chunk",
+                    created,
+                    model: modelName,
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { content: data.delta.text },
+                        finish_reason: null,
+                      },
+                    ],
+                  };
                   controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: data.delta.text })}\n\n`),
+                    encoder.encode(`data: ${JSON.stringify(oaiChunk)}\n\n`),
                   );
                 }
 
@@ -236,7 +344,6 @@ class Agent {
                     output_tokens: data.message.usage.output_tokens,
                   };
                 } else if (data.type === "message_delta" && data.usage) {
-                  // delta usage (for output tokens mostly)
                   if (!realUsage) realUsage = { input_tokens: 0, output_tokens: 0 };
                   if (data.usage.output_tokens) realUsage.output_tokens = data.usage.output_tokens;
                 }
@@ -254,21 +361,46 @@ class Agent {
 
           console.log(`[Agent] Stream complete. Total text length: ${fullText.length}. Usage:`, usage);
 
+          // Emit final chunk with finish_reason and usage (OpenAI convention)
+          const finalChunk = {
+            id: chatId,
+            object: "chat.completion.chunk",
+            created,
+            model: modelName,
+            choices: [
+              {
+                index: 0,
+                delta: {},
+                finish_reason: "stop",
+              },
+            ],
+            usage: {
+              prompt_tokens: usage.input_tokens,
+              completion_tokens: usage.output_tokens,
+              total_tokens: usage.input_tokens + usage.output_tokens,
+            },
+          };
           controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({
-                type: "done",
-                content: fullText,
-                usage,
-              })}\n\n`,
-            ),
+            encoder.encode(`data: ${JSON.stringify(finalChunk)}\n\n`),
           );
+
+          // Signal end of stream
+          controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
           controller.close();
         } catch (err: any) {
           console.error("[Agent] Stream error:", err);
+          const errorChunk = {
+            id: `chatcmpl-${Date.now()}`,
+            object: "chat.completion.chunk",
+            created: Math.floor(Date.now() / 1000),
+            model: modelName,
+            choices: [],
+            error: { message: err.message || "Stream error" },
+          };
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "error", message: err.message || "Stream error" })}\n\n`),
+            encoder.encode(`data: ${JSON.stringify(errorChunk)}\n\n`),
           );
+          controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
           controller.close();
         }
       },

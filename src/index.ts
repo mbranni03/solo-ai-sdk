@@ -8,6 +8,7 @@ import NvidiaProvider from "@/providers/nvidia";
 import MoonshotProvider from "@/providers/moonshot";
 import BedrockProvider from "@/providers/bedrock";
 
+import { FoundationalModels } from "@/config/models";
 import { Tool } from "@/types/Tool";
 import type { Message } from "@/types/Message";
 import type {
@@ -29,6 +30,7 @@ export {
   NvidiaProvider,
   MoonshotProvider,
   BedrockProvider,
+  FoundationalModels,
   Tool,
   createImageGenerationTool,
   createTextToSpeechTool,
