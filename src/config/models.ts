@@ -43,7 +43,7 @@ export const FoundationalModels = Object.freeze({
   },
   "nova-2-lite": {
     aws_bedrock: {
-      modelId: "amazon.nova-2-lite-v1:0",
+      modelId: "us.amazon.nova-2-lite-v1:0",
       pp1mInputTokens: 0.3,
       pp1mOutputTokens: 2.5,
     },
