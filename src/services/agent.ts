@@ -169,6 +169,9 @@ class Agent {
     options?: {
       model?: string;
       tools?: Record<string, Tool>;
+      stream_options?: {
+        include_usage?: boolean;
+      };
     },
   ): ReadableStream<Uint8Array> => {
     const encoder = new TextEncoder();
@@ -176,11 +179,12 @@ class Agent {
     const chatId = `chatcmpl-${Date.now()}`;
     const created = Math.floor(Date.now() / 1000);
     const modelName = options?.model || "unknown";
+    const includeUsage = options?.stream_options?.include_usage === true;
 
     return new ReadableStream<Uint8Array>({
       async start(controller) {
         try {
-          console.log(`[Agent] Starting streamSSE for model: ${modelName}`);
+          console.log(`[Agent] Starting streamSSE for model: ${modelName}, includeUsage: ${includeUsage}`);
           const tools = Object.values(options?.tools || {}).map((tool: Tool) =>
             tool.getFunctionDeclaration(),
           );
@@ -255,11 +259,9 @@ class Agent {
               try {
                 const data = JSON.parse(jsonStr);
 
-                // --- Gemini format ---
-                const geminiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (geminiText) {
-                  fullText += geminiText;
-                  const oaiChunk = {
+                // Helper to emit an OAI chunk
+                const emitChunk = (content: string | null, finishReason: string | null = null, usage: any = null) => {
+                  const oaiChunk: any = {
                     id: chatId,
                     object: "chat.completion.chunk",
                     created,
@@ -267,14 +269,27 @@ class Agent {
                     choices: [
                       {
                         index: 0,
-                        delta: { content: geminiText },
-                        finish_reason: null,
+                        delta: content !== null ? { content } : {},
+                        finish_reason: finishReason,
                       },
                     ],
                   };
+                  if (includeUsage) {
+                    oaiChunk.usage = usage; // null for intermediate chunks
+                  }
                   controller.enqueue(
                     encoder.encode(`data: ${JSON.stringify(oaiChunk)}\n\n`),
                   );
+                };
+
+                // --- Gemini format ---
+                const geminiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                const geminiFinishReason = data.candidates?.[0]?.finishReason;
+                if (geminiText) {
+                  fullText += geminiText;
+                  emitChunk(geminiText, geminiFinishReason === "STOP" ? "stop" : null);
+                } else if (geminiFinishReason) {
+                   emitChunk(null, geminiFinishReason === "STOP" ? "stop" : "length");
                 }
 
                 if (data.usageMetadata) {
@@ -286,24 +301,10 @@ class Agent {
 
                 // --- OpenAI format (used by OpenAI, Mistral, Nvidia, etc.) ---
                 const oaiDelta = data.choices?.[0]?.delta?.content;
-                if (oaiDelta) {
-                  fullText += oaiDelta;
-                  const oaiChunk = {
-                    id: chatId,
-                    object: "chat.completion.chunk",
-                    created,
-                    model: modelName,
-                    choices: [
-                      {
-                        index: 0,
-                        delta: { content: oaiDelta },
-                        finish_reason: null,
-                      },
-                    ],
-                  };
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify(oaiChunk)}\n\n`),
-                  );
+                const oaiFinishReason = data.choices?.[0]?.finish_reason;
+                if (oaiDelta || oaiFinishReason) {
+                  if (oaiDelta) fullText += oaiDelta;
+                  emitChunk(oaiDelta || null, oaiFinishReason || null);
                 }
 
                 if (data.usage) {
@@ -316,22 +317,9 @@ class Agent {
                 // --- Anthropic format ---
                 if (data.type === "content_block_delta" && data.delta?.text) {
                   fullText += data.delta.text;
-                  const oaiChunk = {
-                    id: chatId,
-                    object: "chat.completion.chunk",
-                    created,
-                    model: modelName,
-                    choices: [
-                      {
-                        index: 0,
-                        delta: { content: data.delta.text },
-                        finish_reason: null,
-                      },
-                    ],
-                  };
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify(oaiChunk)}\n\n`),
-                  );
+                  emitChunk(data.delta.text);
+                } else if (data.type === "message_delta" && data.delta?.stop_reason) {
+                  emitChunk(null, data.delta.stop_reason === "end_turn" ? "stop" : data.delta.stop_reason);
                 }
 
                 // Anthropic message_stop / message_delta with usage
@@ -354,35 +342,31 @@ class Agent {
           }
 
           // Decide usage: real if available, else estimated
-          const usage = realUsage || {
+          const usageResult = realUsage || {
             input_tokens: Math.ceil(inputChars / 4),
             output_tokens: Math.ceil(fullText.length / 4),
           };
 
-          console.log(`[Agent] Stream complete. Total text length: ${fullText.length}. Usage:`, usage);
+          console.log(`[Agent] Stream complete. Total text length: ${fullText.length}. Usage:`, usageResult);
 
-          // Emit final chunk with finish_reason and usage (OpenAI convention)
-          const finalChunk = {
-            id: chatId,
-            object: "chat.completion.chunk",
-            created,
-            model: modelName,
-            choices: [
-              {
-                index: 0,
-                delta: {},
-                finish_reason: "stop",
+          // Emit final chunk with usage if requested
+          if (includeUsage) {
+            const usageChunk = {
+              id: chatId,
+              object: "chat.completion.chunk",
+              created,
+              model: modelName,
+              choices: [],
+              usage: {
+                prompt_tokens: usageResult.input_tokens,
+                completion_tokens: usageResult.output_tokens,
+                total_tokens: usageResult.input_tokens + usageResult.output_tokens,
               },
-            ],
-            usage: {
-              prompt_tokens: usage.input_tokens,
-              completion_tokens: usage.output_tokens,
-              total_tokens: usage.input_tokens + usage.output_tokens,
-            },
-          };
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(finalChunk)}\n\n`),
-          );
+            };
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify(usageChunk)}\n\n`),
+            );
+          }
 
           // Signal end of stream
           controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
