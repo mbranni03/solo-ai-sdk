@@ -55,4 +55,32 @@ export const FoundationalModels = Object.freeze({
       pp1mOutputTokens: 0.65,
     },
   },
+  "qwen3-coder-next": {
+    aws_bedrock: {
+      modelId: "qwen.qwen3-coder-next",
+      pp1mInputTokens: 0,
+      pp1mOutputTokens: 0,
+    },
+  },
+  "qwen3-next-80b-a3b": {
+    aws_bedrock: {
+      modelId: "qwen.qwen3-next-80b-a3b",
+      pp1mInputTokens: 0,
+      pp1mOutputTokens: 0,
+    },
+  },
+  "qwen3-vl-235b-a22b": {
+    aws_bedrock: {
+      modelId: "qwen.qwen3-vl-235b-a22b",
+      pp1mInputTokens: 0,
+      pp1mOutputTokens: 0,
+    },
+  },
+  "": {
+    aws_bedrock: {
+      modelId: "",
+      pp1mInputTokens: 0,
+      pp1mOutputTokens: 0,
+    },
+  },
 });
